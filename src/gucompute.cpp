@@ -1,20 +1,35 @@
 #include"gucompute.h"
 
 void gurunner::load (const char* fname) {
-    sz_data=5;
+    std::ifstream fs(fname);
+    if (!fs.good()) {
+        std::cerr << " Input file "<< fname <<" is not good! "<<std::endl;
+        exit(0);
+    }
+    std::string s;
+    char ss[256];
+    if (!std::getline(fs,s)) {
+        std::cerr << "File Empty: "<<fname  <<std::endl;
+    }
+
+    std::istringstream is(s);
+
+    if (!is.getline( ss,256, '\t')) {
+        std ::cerr << "Error reading line "<< s<<std::endl;
+    }
+    std::istringstream iss (ss);
+    iss >> gene;
+    double d;
+    while (is.getline(ss, 256,'\t')){
+        std::istringstream iss1 (ss);
+        iss1 >> d;
+        data.push_back(d);
+    }
+    sz_data = data.size();
     //stub
-    data.resize(sz_data);
     Pg.resize(sz_data);
     Pu.resize(sz_data);
     W.resize(sz_data);
-
-    data[0]=1;
-    data[1]=2;
-    data[3]=1;
-    data[2]=50;
-    data[4]=10;
-    a=*std::min_element(data.begin(),data.end());
-    b=*std::max_element(data.begin(),data.end());
 
 };
 
@@ -76,7 +91,7 @@ void gurunner::get_uni_params(){
     b=*std::max_element(data.begin(),data.end());
     double mm=b, mx=a, d ;
     for (int i=0; i<sz_data; ++i){
-        if (Pu[i]*(1-w) > Pg[i]* w ){
+        if (Pu[i]*(1-w) >= Pg[i]* w ){
             d= data[i];
             if (d<mm) {
                 mm=d;
@@ -85,11 +100,14 @@ void gurunner::get_uni_params(){
             }
         }
     }
+    if (mm < mx){
+        a=mm;
+        b=mx;
+    }
 #if LOG
-    std::cout<< "New a, b is "<<mm << " , "<<mx << std::endl;
+    std::cout<< "New a, b is "<< a  << " , "<< b << std::endl;
 #endif
-    a=mm;
-    b=mx;
+    return;
 };
 
 
@@ -106,6 +124,7 @@ void gurunner::get_normal_params(){
 #if LOG
     std::cout << " New mu, sigma is " << mu <<" , " <<sigma <<std::endl;
 #endif
+    return;
 };
 
 
@@ -133,8 +152,88 @@ void gurunner::run(double tol =1e-5, int mx = 500){
         get_total_likelihood(); //res gets updated here
         ++i;
     }
-#if LOG
+#if LOG2
     std::cout << "After " << i << " runs, likelihood at " << res << std::endl;
+    std::cout << " New mu, sigma is " << mu <<" , " <<sigma <<std::endl;
+    std::cout<< "New a, b is "<< a  << " , "<< b << std::endl;
+    std::cout<< "Weight for Gaussian is "<< w << std::endl;
 #endif
+    return;
+};
+
+
+void gurunner::init(){
+// get w
+    std::normal_distribution<double> g1(0.5, 0.2);
+    w = g1 (rndgen);
+    //initialize around 0.5
+// get a, b if not bounded
+    a=*std::min_element(data.begin(),data.end());
+    b=*std::max_element(data.begin(),data.end());
+    if (!uniform_fixed) {
+        std::uniform_real_distribution <double> g2(a, a+ (b-a)/2);
+        std::uniform_real_distribution <double> g3(b-(b-a)/2, b);
+        a = g2(rndgen);
+        b = g3(rndgen);
+        //tentative
+    }
+    mu = 0;
+    for (auto & d: data){
+        mu+=d;
+    }
+    mu/=sz_data;
+    sigma=0;
+    for (auto & d: data){
+        sigma +=(d-mu)*(d-mu);
+    }
+    sigma/=sz_data;
+    sigma = sqrt(sigma);
+// get mu from conjugate prior
+    std::normal_distribution <double> g4(mu, sigma);
+    mu = g4(rndgen);
+#if LOG
+    std::cout << "Assigned random params, w, a, b, mu, sigma: " << w << "," <<\
+        a<<","<<b<<","<<mu<<","<<sigma<<std::endl;
+#endif
+    return;
+};
+
+void gurunner::record(){
+    if (current_run_idx>=restart_num) return;
+    as[current_run_idx] = a;
+    bs[current_run_idx] = b;
+    ws[current_run_idx] = w;
+    mus[current_run_idx] = mu;
+    sigmas[current_run_idx] = sigma;
+    ress[current_run_idx] = res;
+    ++current_run_idx;
+    return;
+};
+
+void gurunner::writeout(const unsigned& idx ){
+#if LOG2
+    std::cout << "min element is "<<idx <<std::endl;
+#endif
+    std::ofstream f;
+    f.open(prefix+"_EMResults.txt",std::ofstream::app);
+    if (f.good()){
+        f << prefix<<","<<gene << ","<<ws[idx]<<","<<as[idx]<<","<<bs[idx]\
+            <<","<<mus[idx]<<","<<sigmas[idx]<<","<<ress[idx]<<","<<idx<<std::endl;
+        f.flush();
+        f.close();
+    } else {
+        std::cerr << " Failed to open file : "<<prefix <<"_EMResults.txt" <<std::endl;
+    }
+    return;
+};
+
+void gurunner::train(){
+    for (int i = 0; i <restart_num; ++i){
+        init();
+        run();
+        record();
+    }
+    auto mi = std::max_element(ress.begin(),ress.end());
+    writeout((unsigned) (mi- ress.begin()));
     return;
 };

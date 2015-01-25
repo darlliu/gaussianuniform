@@ -11,22 +11,28 @@
 #define gucompute_h
 
 #include<iostream>
+#include<fstream>
 #include<string>
+#include<sstream>
 #include<vector>
 #include<cmath>
 #include<algorithm>
+#include<random>
 #define pi M_PI
-#define LOG 1
+#define LOG2 1
+#if LOG2
+#define LOG 0
+#endif
 static double pi2 = sqrt(2*pi) ;
 
 class gurunner
 {
     public:
-        gurunner (const char* pfx, const unsigned& num,
+        gurunner (const char* pfx, const char*g,  const unsigned& num,
                 const bool& uu,const double& ww,const double& aa,const double& bb,
                 const double& muu, const double& sigmaa)
-            : prefix (pfx), uniform_fixed(uu), restart_num(num), w(ww),
-            a(aa), b(bb), mu(muu), sigma(sigmaa), res(-1.0)
+            : prefix (pfx), gene(g),uniform_fixed(uu), restart_num(num), w(ww),
+            a(aa), b(bb), mu(muu), sigma(sigmaa), res(-1.0), current_run_idx(0)
         {
             as.resize(restart_num);
             bs.resize(restart_num);
@@ -36,7 +42,7 @@ class gurunner
             ress.resize(restart_num);
         };
 
-        gurunner ()  : gurunner ("Test",1, 0, 0.5, 0.0, 1.0, 0.0, 1.0) {};
+        gurunner ()  : gurunner ("Test","TestGene", 5, 0, 0.5, 0.0, 1.0, 0.0, 1.0) {};
         //Delegation
 
         ~gurunner() {};
@@ -49,8 +55,9 @@ class gurunner
         void load (const char*);
         void init () ; // randomly initialize
         void record (); // record current parameters
-        void writeout(); // write out a report of the whole run
+        void writeout(const unsigned&); // write out a report of the whole run
         void run (double, int) ; //main routine
+        void train (); //run with restarts
 
 
         //running routines
@@ -61,19 +68,20 @@ class gurunner
         void get_total_likelihood(); // calculate res
 
     private:
-        std::string prefix;
+        std::string prefix, gene;
         bool uniform_fixed;
         //whether the uniform distribution is bounded lower at 0 always
         double a, b; //initial values for U(a,b) uniform distribution of the mixture
         double w; //weight prior
         double mu, sigma; // Gaussian parameters
         const unsigned restart_num; //number of random restarts
-        unsigned sz_data;
+        unsigned sz_data, current_run_idx;
         double res; // Likelihood value
         std::vector<double> as, bs, ws, mus, sigmas, ress; // container for restarts
         std::vector<double> data, Pg, Pu, W;
         //constexpr double pi2=sqrt(pi); //valid in D not in C++11
 
+        std::default_random_engine rndgen;
 
 };
 

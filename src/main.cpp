@@ -3,7 +3,7 @@
 int main(int argc, char** argv){
 
     gurunner g;
-    g.load("test");
-    g.run(1e-5, 50);
+    g.load("test_in.txt");
+    g.train();
     return 0;
 };
