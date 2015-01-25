@@ -1,24 +1,20 @@
 #include"gucompute.h"
 
-void gurunner::load (const char* fname) {
-    std::ifstream fs(fname);
-    if (!fs.good()) {
-        std::cerr << " Input file "<< fname <<" is not good! "<<std::endl;
-        exit(0);
-    }
-    std::string s;
-    char ss[256];
-    if (!std::getline(fs,s)) {
-        std::cerr << "File Empty: "<<fname  <<std::endl;
-    }
+void gurunner::load (const std::string& s) {
 
     std::istringstream is(s);
+    char ss[256];
 
     if (!is.getline( ss,256, '\t')) {
         std ::cerr << "Error reading line "<< s<<std::endl;
+        return;
     }
+
     std::istringstream iss (ss);
+
     iss >> gene;
+
+    data.clear(); // clear the data vector
     double d;
     while (is.getline(ss, 256,'\t')){
         std::istringstream iss1 (ss);
@@ -30,6 +26,11 @@ void gurunner::load (const char* fname) {
     Pg.resize(sz_data);
     Pu.resize(sz_data);
     W.resize(sz_data);
+    current_run_idx = 0; // reset index for new run
+#if LOG2
+    std::cout << "Loaded "<<gene <<std::endl;
+#endif
+    return;
 
 };
 
@@ -152,7 +153,7 @@ void gurunner::run(double tol =1e-5, int mx = 500){
         get_total_likelihood(); //res gets updated here
         ++i;
     }
-#if LOG2
+#if LOG
     std::cout << "After " << i << " runs, likelihood at " << res << std::endl;
     std::cout << " New mu, sigma is " << mu <<" , " <<sigma <<std::endl;
     std::cout<< "New a, b is "<< a  << " , "<< b << std::endl;
@@ -211,7 +212,7 @@ void gurunner::record(){
 };
 
 void gurunner::writeout(const unsigned& idx ){
-#if LOG2
+#if LOG
     std::cout << "min element is "<<idx <<std::endl;
 #endif
     std::ofstream f;

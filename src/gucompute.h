@@ -16,10 +16,11 @@
 #include<sstream>
 #include<vector>
 #include<cmath>
+#include<thread>
 #include<algorithm>
 #include<random>
 #define pi M_PI
-#define LOG2 1
+#define LOG2 0
 #if LOG2
 #define LOG 0
 #endif
@@ -28,7 +29,7 @@ static double pi2 = sqrt(2*pi) ;
 class gurunner
 {
     public:
-        gurunner (const char* pfx, const char*g,  const unsigned& num,
+        gurunner (const std::string& pfx, const char*g,  const unsigned& num,
                 const bool& uu,const double& ww,const double& aa,const double& bb,
                 const double& muu, const double& sigmaa)
             : prefix (pfx), gene(g),uniform_fixed(uu), restart_num(num), w(ww),
@@ -52,7 +53,7 @@ class gurunner
             std::cout << "Testing \t "<<prefix << " " << pi2 <<std::endl;
         };
 
-        void load (const char*);
+        void load (const std::string&);
         void init () ; // randomly initialize
         void record (); // record current parameters
         void writeout(const unsigned&); // write out a report of the whole run
@@ -66,6 +67,8 @@ class gurunner
         void get_uni_params(); //if uniform is not bounded at lower/higher datum, calculate the new bound.
         void get_normal_params(); // calculate the sigma and mu given the datum.
         void get_total_likelihood(); // calculate res
+
+        std::thread spawn() { return std::thread (&gurunner::train, this); };
 
     private:
         std::string prefix, gene;
