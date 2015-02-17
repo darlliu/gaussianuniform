@@ -1,8 +1,8 @@
 #include"gucompute.h"
 
-auto routine(const char* fname, std::string pfx , bool bounded, int restarts){
+auto routine( std::string fname, std::string pfx , bool bounded, int restarts){
 
-    std::vector<gurunner*> gs;
+    std::vector<std::shared_ptr<gurunner>> gs;
 
     std::ifstream fs(fname);
     if (!fs.good()) {
@@ -14,7 +14,7 @@ auto routine(const char* fname, std::string pfx , bool bounded, int restarts){
         std::cerr << "File Empty: "<<fname  <<std::endl;
     }
     while (std::getline(fs,s)){
-        auto  g =  new gurunner {pfx,"(PlaceHolder)", restarts, bounded, 0.5, 0.0, 1.0, 0.0, 1.0} ;
+        auto  g =  std::shared_ptr<gurunner>(new gurunner {pfx,"(PlaceHolder)", restarts, bounded, 0.5, 0.0, 1.0, 0.0, 1.0} );
         g->load(s);
         //g->train();
         gs.push_back(g);
@@ -25,9 +25,8 @@ auto routine(const char* fname, std::string pfx , bool bounded, int restarts){
 int main(int argc, char** argv){
 
     std::string prefix = "Test";
-    unsigned num_threads=10;
-    int restarts = 500;
-    char* fname = "test_in.txt";
+    unsigned num_threads=10, restarts = 500;
+    std::string fname = "test_in.txt";
 
     //std::cerr << "(this program) fname prefix num_threads bounded num_retarts" << std::endl;
     //std::cerr << *argv[1] <<"," << *argv[2]<<std::endl;
@@ -45,26 +44,25 @@ int main(int argc, char** argv){
     std::vector <std::thread> thrs;
     thrs.resize(num_threads);
 
-    int idx = 0, idy = 0; // idx for counting runner objects idy for counting threads
+    unsigned idx = 0, idy = 0; // idx for counting runner objects idy for counting threads
     while (idx < gs.size()){
         if (idy<num_threads && idx < gs.size()) {
             auto g = gs[idx]; //current one to fork
             thrs[idy] = g->spawn();
-            std::cout << "Spawned number "<<idy<<std::endl;
             ++idy;
             ++idx;
         } else {
             //join after total number of threads spawn
             for (unsigned idz =0; idz<idy; ++idz){
                 thrs[idz].join();
-                std::cout<< idz<<":"<<idy<<std::endl;
             }
+            std::cout<< "Joined thread global, block sz: "<<idx<<","<<idy<<std::endl;
             idy = 0;
         }
     }
     for (unsigned idz =0; idz<idy; ++idz){
         thrs[idz].join();
-        std::cout<< idz<<":"<<idy<<std::endl;
+        std::cout<< "Joined thread global, current, block sz: "<<idx<<","<<idz<<","<<idy<<std::endl;
     }
     //for (auto& th : thrs){
         //th.join();
