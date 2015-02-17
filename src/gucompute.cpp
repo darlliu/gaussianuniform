@@ -209,8 +209,12 @@ void gurunner::init(){
     sigma/=sz_data;
     sigma = sqrt(sigma);
 // get mu from conjugate prior
-    std::normal_distribution <double> g4(mu, sigma);
+    std::normal_distribution <double> g4(mu, sigma*2);
+    std::normal_distribution <double> g5(sigma, sigma/2);
     mu = g4(rndgen);
+    double _sigma = g5(rndgen);
+    if (mu<0) mu=0;
+    if (_sigma>0) sigma=_sigma;
 #if LOG
     std::cout << "Assigned random params, w, a, b, mu, sigma: " << w << "," <<\
         a<<","<<b<<","<<mu<<","<<sigma<<std::endl;
@@ -255,6 +259,5 @@ void gurunner::train(){
     }
     auto mi = std::max_element(ress.begin(),ress.end());
     writeout((unsigned) (mi- ress.begin()));
-    std::cout<< "Training one cycle finished for "<<prefix<<std::endl;
     return;
 };
