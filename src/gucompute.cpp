@@ -113,15 +113,34 @@ void gurunner::get_uni_params(){
 
 
 void gurunner::get_normal_params(){
+#define method 1
+#if method
     mu = 0;
     sigma = 0;
     for (int i =0; i < sz_data; ++i){
         mu+=W[i]*data[i];
-        sigma+=W[i]*(data[i]-mu)*(data[i]-mu);
     }
     mu= mu/w/sz_data;
+    for (int i =0; i < sz_data; ++i){
+        sigma+=W[i]*(data[i]-mu)*(data[i]-mu);
+    }
     sigma = sigma/w/sz_data;
     sigma = sqrt(sigma);
+#else
+    mu = 0;
+    sigma = 0;
+    int cnt = 0;
+    for (int i =0; i < sz_data; ++i){
+        if (W[i]>0.5) mu+=data[i];
+        ++cnt;
+    }
+    mu= mu/cnt;
+    for (int i =0; i < sz_data; ++i){
+        if (W[i]>0.5) sigma+=(data[i]-mu)*(data[i]-mu);
+    }
+    sigma = sigma/cnt;
+    sigma = sqrt(sigma);
+#endif
 #if LOG
     std::cout << " New mu, sigma is " << mu <<" , " <<sigma <<std::endl;
 #endif
@@ -236,5 +255,6 @@ void gurunner::train(){
     }
     auto mi = std::max_element(ress.begin(),ress.end());
     writeout((unsigned) (mi- ress.begin()));
+    std::cout<< "Training one cycle finished for "<<prefix<<std::endl;
     return;
 };

@@ -1,8 +1,8 @@
 #include"gucompute.h"
 
-auto loadf(const char* fname, std::string pfx , bool bounded, int restarts){
+auto routine(const char* fname, std::string pfx , bool bounded, int restarts){
 
-    std::vector<gurunner> gs;
+    std::vector<gurunner*> gs;
 
     std::ifstream fs(fname);
     if (!fs.good()) {
@@ -14,9 +14,9 @@ auto loadf(const char* fname, std::string pfx , bool bounded, int restarts){
         std::cerr << "File Empty: "<<fname  <<std::endl;
     }
     while (std::getline(fs,s)){
-        gurunner g = {pfx,"(PlaceHolder)", restarts, bounded, 0.5, 0.0, 1.0, 0.0, 1.0} ;
-        g.load(s);
-        g.train();
+        auto  g =  new gurunner {pfx,"(PlaceHolder)", restarts, bounded, 0.5, 0.0, 1.0, 0.0, 1.0} ;
+        g->load(s);
+        //g->train();
         gs.push_back(g);
     }
     return gs;
@@ -26,7 +26,7 @@ int main(int argc, char** argv){
 
     std::string prefix = "Test";
     unsigned num_threads=10;
-    int restarts = 50;
+    int restarts = 500;
     char* fname = "test_in.txt";
 
     //std::cerr << "(this program) fname prefix num_threads bounded num_retarts" << std::endl;
@@ -39,32 +39,36 @@ int main(int argc, char** argv){
     //std::cerr << "Bound status: "<<bounded_uniform <<std::endl;
     //simple interface
 
-    loadf(fname, prefix+"_bounded" , 1, restarts);
-    loadf(fname, prefix+"_unbounded" , 0, restarts);
-/*
- *    if (num_threads > gs.size()) num_threads = gs.size();
- *    std::vector <std::thread> thrs;
- *    thrs.resize(num_threads);
- *
- *    int idx = 0, idy = 0; // idx for counting runner objects idy for counting threads
- *    while (idx < gs.size()){
- *        if (idy<num_threads && idx < gs.size()) {
- *            auto g = gs[idx]; //current one to fork
- *            thrs[idy] = g.spawn();
- *            ++idy;
- *            ++idx;
- *        } else {
- *            //join after total number of threads spawn
- *            for (auto& th : thrs){
- *                th.join();
- *            }
- *            idy = 0;
- *        }
- *    }
- *    for (auto& th : thrs){
- *        th.join();
- *    } //finish up joining after jumping out
- */
+    auto gs = routine(fname, prefix+"_bounded" , 1, restarts);
+    routine(fname, prefix+"_unbounded" , 0, restarts);
+    if (num_threads > gs.size()) num_threads = gs.size();
+    std::vector <std::thread> thrs;
+    thrs.resize(num_threads);
+
+    int idx = 0, idy = 0; // idx for counting runner objects idy for counting threads
+    while (idx < gs.size()){
+        if (idy<num_threads && idx < gs.size()) {
+            auto g = gs[idx]; //current one to fork
+            thrs[idy] = g->spawn();
+            std::cout << "Spawned number "<<idy<<std::endl;
+            ++idy;
+            ++idx;
+        } else {
+            //join after total number of threads spawn
+            for (unsigned idz =0; idz<idy; ++idz){
+                thrs[idz].join();
+                std::cout<< idz<<":"<<idy<<std::endl;
+            }
+            idy = 0;
+        }
+    }
+    for (unsigned idz =0; idz<idy; ++idz){
+        thrs[idz].join();
+        std::cout<< idz<<":"<<idy<<std::endl;
+    }
+    //for (auto& th : thrs){
+        //th.join();
+    //} //finish up joining after jumping out
 
     //for (auto & g: gs) g.train();
 
