@@ -19,6 +19,7 @@
 #include<thread>
 #include<algorithm>
 #include<random>
+#include<memory>
 #define pi M_PI
 #define LOG2 0
 #if LOG2
